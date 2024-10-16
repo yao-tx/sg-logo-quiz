@@ -151,7 +151,7 @@ export const LogoQuiz = () => {
                 }
               }}
               placeholder="Enter your guess"
-              className="w-full"
+              className="w-full text-[16px]"
               autoFocus
             />
             <Button onClick={handleGuess} disabled={isCorrect} className="w-full">
