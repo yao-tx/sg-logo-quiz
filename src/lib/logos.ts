@@ -1,4 +1,4 @@
-interface Logo {
+export interface Logo {
   id: number;
   name: string;
   acceptedAnswers: string[];

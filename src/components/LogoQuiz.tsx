@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useReducer } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,99 +9,52 @@ import { getRandomLogos } from "@/lib/logos";
 import { Loader2 } from "lucide-react";
 import Fireworks from "react-canvas-confetti/dist/presets/fireworks";
 import { cn } from "@/lib/utils";
+import { useCountdown } from "@/hooks/useCountdown";
+import { gameReducer, initialState } from "@/context/gameReducer";
+
+const HINT_COUNTDOWN_TIMER = 10;
 
 const normalizeText = (text: string): string => text.toLowerCase().replace(/\s/g, '');
 
-const getInitialGameState = () => ({
-  currentLogoIndex: 0,
-  score: 0,
-  skipsRemaining: 3,
-  gameOver: false,
-});
-
 export const LogoQuiz = () => {
-  const [gameState, setGameState] = useState({
-    currentLogoIndex: 0,
-    score: 0,
-    skipsRemaining: 3,
-    gameOver: false,
-  });
+  const [gameState, dispatch] = useReducer(gameReducer, initialState);
 
-  const [logoData, setLogoData] = useState(getRandomLogos(30));
-  const [userGuess, setUserGuess] = useState("");
-  const [message, setMessage] = useState("");
   const [logoSrc, setLogoSrc] = useState("");
-  const [isCorrect, setIsCorrect] = useState(false);
   const [triggerShake, setTriggerShake] = useState(false);
-  const [isHintEnabled, setIsHintEnabled] = useState(false);
-  const [countdown, setCountdown] = useState(10); // Start countdown at 5 seconds
+  const hintCountdown = useCountdown(10);
 
-  const noOfLogos = logoData.length;
-
-  const currentLogo = useMemo(() => logoData[gameState.currentLogoIndex], [gameState.currentLogoIndex]);
-  const isLastLogo = gameState.currentLogoIndex === noOfLogos - 1;
+  const currentLogo = useMemo(() => gameState.logoData[gameState.currentLogoIndex], [gameState.currentLogoIndex]);
 
   const handleNext = useCallback(() => {
-    setIsCorrect(false);
-    setCountdown(10);
-    setIsHintEnabled(false);
+    hintCountdown.reset(HINT_COUNTDOWN_TIMER);
 
-    if (isLastLogo) {
-      setGameState(prev => ({ ...prev, gameOver: true }));
+    if (gameState.currentLogoIndex < gameState.logoData.length - 1) {
+      dispatch({ type: "NEXT" });
+      hintCountdown.reset(HINT_COUNTDOWN_TIMER);
     } else {
-      setGameState(prev => ({ ...prev, currentLogoIndex: prev.currentLogoIndex + 1 }));
-      setUserGuess('');
-      setMessage('');
+      dispatch({ type: "GAME_OVER" });
     }
-  }, [isLastLogo]);
+  }, [gameState]);
 
-  const handleGuess = useCallback(() => {
+  const handleGuess = useCallback((userGuess: string) => {
     const normalizedGuess = normalizeText(userGuess);
-
     if (currentLogo.acceptedAnswers.some(answer => normalizeText(answer) === normalizedGuess)) {
-      setMessage(`Correct! This is ${currentLogo.name}!`);
-      setGameState(prev => ({ ...prev, score: prev.score + 1 }));
-      setIsCorrect(true);
-      setUserGuess("");
+      dispatch({ type: "GUESS_CORRECT", message: `Correct! This is ${currentLogo.name}!` });
       setTriggerShake(false);
 
       setTimeout(() => {
         handleNext();
       }, 1000);
     } else {
-      setMessage("Incorrect! Try again.");
+      dispatch({ type: "GUESS_INCORRECT" });
       setTriggerShake(true);
-
       setTimeout(() => setTriggerShake(false), 300);
     }
-  }, [userGuess, currentLogo]);
-
-  const resetGame = useCallback(() => {
-    setLogoData(getRandomLogos(30));
-    setGameState(getInitialGameState());
-    setUserGuess("");
-    setMessage("");
-    setIsCorrect(false);
-    setTriggerShake(false);
-    setIsHintEnabled(false);
-    setCountdown(10);
-  }, []);
+  }, [gameState]);
 
   useEffect(() => {
     setLogoSrc(`https://res.cloudinary.com/dcxh252ec/image/upload/w_512,f_avif,q_auto/logos%2F${currentLogo.fileName}`);
   }, [currentLogo]);
-
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setInterval(() => {
-        setCountdown((prev) => prev - 1);
-      }, 1000);
-
-      return () => clearInterval(timer); // Cleanup the timer on unmount
-    } else {
-      setIsHintEnabled(true); // Enable button after countdown
-    }
-  }, [countdown]);
 
   if (gameState.gameOver) {
     return (
@@ -110,8 +63,8 @@ export const LogoQuiz = () => {
         <Card className="w-full max-w-2xl">
           <div className="text-center px-5 py-8">
             <p className="text-4xl mb-4">Your final score:</p>
-            <p className="text-4xl font-bold">{gameState.score}/{logoData.length}</p>
-            <Button onClick={resetGame} className="w-full max-w-sm mt-12">Play Again</Button>
+            <p className="text-4xl font-bold">{gameState.score}/{gameState.logoData.length}</p>
+            <Button onClick={() => dispatch({ type: "RESET" })} className="w-full max-w-sm mt-12">Play Again</Button>
           </div>
         </Card>
       </>
@@ -124,7 +77,7 @@ export const LogoQuiz = () => {
       triggerShake ? "shake" : "",
     )}>
       <CardHeader>
-        <CardTitle className="text-center">{`Logo #${gameState.currentLogoIndex + 1}/${noOfLogos}`}</CardTitle>
+        <CardTitle className="text-center">{`Logo #${gameState.currentLogoIndex + 1}/${gameState.logoData.length}`}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center space-y-4">
@@ -142,28 +95,28 @@ export const LogoQuiz = () => {
           <div className="flex flex-col space-y-2 w-full max-w-sm">
             <Input
               type="text"
-              value={userGuess}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUserGuess(e.target.value)}
+              value={gameState.userGuess}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: "MAKE_GUESS", "userGuess": e.target.value })}
               onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  handleGuess();
+                  handleGuess(gameState.userGuess);
                 }
               }}
               placeholder="Enter your guess"
               className="w-full text-[16px]"
               autoFocus
             />
-            <Button onClick={handleGuess} disabled={isCorrect} className="w-full">
+            <Button onClick={() => handleGuess(gameState.userGuess)} disabled={gameState.isCorrect} className="w-full">
               Guess
             </Button>
           </div>
-          {message && <p className="text-center">{message}</p>}
+          {gameState.message && <p className="text-center">{gameState.message}</p>}
           <div className="flex gap-x-3">
-            <Button onClick={handleNext} disabled={isCorrect}>Skip</Button>
+            <Button onClick={handleNext} disabled={gameState.isCorrect}>Skip</Button>
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="outline" disabled={!isHintEnabled || isCorrect}>{`Hint${countdown ? ' (' + countdown + ')' : '' }`}</Button>
+                <Button variant="outline" disabled={hintCountdown.isRunning || gameState.isCorrect}>{`Hint${hintCountdown.countdown ? ' (' + hintCountdown.countdown + ')' : '' }`}</Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
@@ -176,7 +129,7 @@ export const LogoQuiz = () => {
         </div>
       </CardContent>
       <CardFooter>
-        <p className="text-center w-full">{`Score: ${gameState.score} / ${noOfLogos}`}</p>
+        <p className="text-center w-full">{`Score: ${gameState.score} / ${gameState.logoData.length}`}</p>
       </CardFooter>
     </Card>
   );
