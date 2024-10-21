@@ -2,9 +2,6 @@ import { Logo, getRandomLogos } from "@/lib/logos";
 
 const INCORRECT_MESSAGE = "Incorrect! Try again.";
 
-const normalizeText = (text: string): string =>
-  text.toLowerCase().replace(/\s/g, "");
-
 type GameState = {
   logoData: Logo[];
   currentLogoIndex: number;

@@ -5,7 +5,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getRandomLogos } from "@/lib/logos";
 import { Loader2 } from "lucide-react";
 import Fireworks from "react-canvas-confetti/dist/presets/fireworks";
 import { cn } from "@/lib/utils";
