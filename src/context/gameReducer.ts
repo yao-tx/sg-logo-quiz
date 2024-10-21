@@ -55,7 +55,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
     case "GAME_OVER":
       return { ...state, gameOver: true };
     case "RESET":
-      return initialState;
+      return { ...initialState, logoData: getRandomLogos(30) };
     default:
       return state;
   }
