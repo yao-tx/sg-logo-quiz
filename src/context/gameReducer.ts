@@ -1,5 +1,6 @@
 import { Logo, getRandomLogos } from "@/lib/logos";
 
+const DEFAULT_LOGO_COUNT = 30;
 const INCORRECT_MESSAGE = "Incorrect! Try again.";
 
 type GameState = {
@@ -21,7 +22,7 @@ type Action =
   | { type: "RESET" };
 
 const initialState: GameState = {
-  logoData: getRandomLogos(30),
+  logoData: getRandomLogos(DEFAULT_LOGO_COUNT),
   currentLogoIndex: 0,
   score: 0,
   userGuess: "",
@@ -55,7 +56,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
     case "GAME_OVER":
       return { ...state, gameOver: true };
     case "RESET":
-      return { ...initialState, logoData: getRandomLogos(30) };
+      return { ...initialState, logoData: getRandomLogos(DEFAULT_LOGO_COUNT) };
     default:
       return state;
   }
