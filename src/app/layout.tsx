@@ -26,10 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <script src="https://unpkg.com/react-scan@0.0.15/dist/auto.global.js"></script>
-        <Script src="https://cloud.umami.is/script.js" data-website-id="2c292220-ba5e-498c-a3f8-f0f77ca71134" defer />
-      </head>
+      <Script src="https://cloud.umami.is/script.js" data-website-id="2c292220-ba5e-498c-a3f8-f0f77ca71134" defer />
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
